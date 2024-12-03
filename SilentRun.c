@@ -1,80 +1,104 @@
-#include <windows.h>
+/**
+ * File: SilentRun.c
+ * Author: ronny <yq.worm@gmail.com>
+ * Copyright (c) 2024, ronny
+ * Public Domain.
+ * Version: 1.0.0
+ *
+ * Description: å®‰é™çš„è°ƒç”¨æ‰§è¡Œå¤–éƒ¨ç¨‹åº
+ * 
+ */
+
+#include <getopt.h>
 #include <stdio.h>
-#include <string.h>
+#include <windows.h>
 
-// Ö´ĞĞÖ¸¶¨Â·¾¶µÄ³ÌĞò
-void executeProgram(const char* programPath, BOOL hideWindow) {
-	STARTUPINFO si;
-	PROCESS_INFORMATION pi;
-	
-	// ³õÊ¼»¯½á¹¹Ìå
-	ZeroMemory(&si, sizeof(si));
-	si.cb = sizeof(si);
-	ZeroMemory(&pi, sizeof(pi));
-	
-	// ¸ù¾İ hideWindow ²ÎÊı¾ö¶¨ÊÇ·ñÒş²Ø´°¿Ú
-	si.dwFlags = STARTF_USESHOWWINDOW;
-	si.wShowWindow = hideWindow ? SW_HIDE : SW_SHOW;
-	
-	// ´´½¨ĞÂ½ø³Ì
-	if (!CreateProcess(NULL,   // Ã»ÓĞÆô¶¯Ó¦ÓÃ³ÌĞòµÄÂ·¾¶£¬Ê¹ÓÃÃüÁîĞĞ
-		(char*)programPath, // ÒªÆô¶¯µÄÓ¦ÓÃ³ÌĞòÃû
-		NULL,           // ½ø³ÌµÄ°²È«ÊôĞÔ
-		NULL,           // Ïß³ÌµÄ°²È«ÊôĞÔ
-		FALSE,          // ²»¼Ì³Ğ¾ä±ú
-		CREATE_NO_WINDOW,  // ´´½¨±êÖ¾
-		NULL,           // Ê¹ÓÃ¸¸½ø³ÌµÄ»·¾³¿é
-		NULL,           // Ê¹ÓÃ¸¸½ø³ÌµÄµ±Ç°Ä¿Â¼
-		&si,            // STARTUPINFO½á¹¹
-		&pi)) {         // PROCESS_INFORMATION½á¹¹
-		printf("Failed to create process: %s\n", programPath);
-		return;
-	}
-	
-	// ¹Ø±Õ½ø³ÌºÍÏß³Ì¾ä±ú
-	CloseHandle(pi.hProcess);
-	CloseHandle(pi.hThread);
+const char * version = "1.0.0";
+int run_program(const char *path);
+int file_exists(const char *path);
+
+int main(int argc, char *argv[])
+{
+    // åˆ¤æ–­é€‰é¡¹å’Œå‚æ•°
+    int option;
+    while ((option = getopt(argc, argv, "hvr:s:")) != -1)
+    {
+        switch (option)
+        {
+            case 'h':
+                printf("help option selected.\n");
+                break;
+            case 'v':
+                printf("%s: %s.\n", argv[0], version);
+                break;
+            case 'r':
+                run_program(optarg);
+                break;  
+            case '?':
+                printf("Unknown options.\n");
+                break;
+            default:
+                printf("This is default options.\n");
+                break;
+        }
+    }
+
+    if (optind == 1 && argc == 1)
+    {
+        if (!file_exists("run.bat"))
+        {
+            run_program("run.bat");
+        }       
+    }
+    return 0;
 }
 
-// ´¦ÀíÃüÁîĞĞ²ÎÊı²¢Ö´ĞĞÏàÓ¦µÄ³ÌĞò
-void handleArgs(int argc, char* argv[]) {
-	for (int i = 1; i < argc; ++i) {
-		if (strcmp(argv[i], "-r") == 0) {
-			// ÕÒµ½ -r ²ÎÊı£¬Ö´ĞĞÆäºóµÄÃ¿¸ö³ÌĞòÂ·¾¶
-			for (int j = i + 1; j < argc; ++j) {
-				executeProgram(argv[j], FALSE);
-			}
-			return; // ËùÓĞÂ·¾¶ÒÑÖ´ĞĞ£¬·µ»Ø
-		} else if (strcmp(argv[i], "-rh") == 0) {
-			for (int j = i + 1; j < argc; ++j) {
-				executeProgram(argv[j], TRUE);
-			}
-			return;
-		}
-	}
-	
-	//Èç¹ûÃ»ÓĞ -r »ò -rh ²ÎÊı£¬Ö´ĞĞÄ¬ÈÏÆô¶¯³ÌĞò
-	const char* defaultPrograms[] = {
-		"RunAny\\RunAny.exe",
-		"Run.exe"
-	};
-	
-	for (int i = 0; i < 2; ++i) {
-		executeProgram(defaultPrograms[i], FALSE);
-	}
-	//¾²Ä¬Æô¶¯Ä¬ÈÏÅú´¦Àí
-	const char* defaultBat[] = {
-		"SilentRun.bat",
-		"Run.bat"
-	};
-	
-	for (int i = 0; i < 2; ++i) {
-		executeProgram(defaultBat[i], TRUE);
-	}	
+// åˆ¤æ–­é»˜è®¤æ–‡ä»¶æ˜¯å¦å­˜åœ¨
+int file_exists(const char *path)
+{
+    FILE *file = fopen(path, "r");
+    if (file)
+    {
+        fclose(file);
+        return 0;
+    }
+    return 1;
 }
 
-int main(int argc, char* argv[]) {
-	// ´¦ÀíÃüÁîĞĞ²ÎÊı
-	handleArgs(argc, argv);
-	return 0;
+// è¿›ç¨‹è°ƒç”¨å¤–éƒ¨ç¨‹åºå¹¶é€€å‡ºè‡ªèº«
+int run_program(const char *path)
+{
+    STARTUPINFO si;
+    PROCESS_INFORMATION pi;
+
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    ZeroMemory(&pi, sizeof(pi));
+
+    size_t len = sizeof(path);
+    char dest[len + 1];
+    strncpy(dest, path, len);
+    dest[len] = '\0';
+
+    // å¯åŠ¨æ–°çš„è¿›ç¨‹
+    if (CreateProcess(
+            NULL,
+            dest,
+            NULL,
+            NULL,
+            FALSE,
+            0,
+            NULL,
+            NULL,
+            &si,
+            &pi)
+        ) {
+        ExitProcess(0); // ç«‹å³é€€å‡ºå½“å‰è¿›ç¨‹
+    }
+    else
+    {
+        printf("CreateProcess failed.\n");
+        return 1;
+    }
+    return 0;
 }
